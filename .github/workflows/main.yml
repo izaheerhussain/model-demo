@@ -1,0 +1,36 @@
+name: Train Diabetes Model on Push
+
+# Trigger the workflow when code is pushed to the 'main' branch
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'train.py'
+      - 'pipeline.yml'
+
+jobs:
+  train-model:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Check out the repository code
+      - name: Check out repository code
+        uses: actions/checkout@v3
+
+      # 2. Log into Azure using the secret you created
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 3. Install the Azure ML CLI extension
+      - name: Install Azure ML CLI
+        run: az extension add -n ml -y
+
+      # 4. Submit the pipeline to Azure ML
+      - name: Submit ML Pipeline
+        # Replace the resource group and workspace names below!
+        run: |
+          az ml job create --file pipeline.yml \
+                           --resource-group YOUR_RESOURCE_GROUP_NAME \
+                           --workspace-name YOUR_WORKSPACE_NAME

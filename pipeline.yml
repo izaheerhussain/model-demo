@@ -1,0 +1,23 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+display_name: diabetes-automated-pipeline
+experiment_name: github-automated-training
+
+settings:
+  default_compute: azureml:serverless
+
+jobs:
+  validate_step:
+    type: command
+    command: echo "Data is clean" > ${{outputs.step_1_done}}
+    environment: azureml://registries/azureml/environments/sklearn-1.5/labels/latest
+    outputs:
+      step_1_done:
+        type: uri_file
+
+  train_step:
+    type: command
+    command: python train.py
+    environment: azureml://registries/azureml/environments/sklearn-1.5/labels/latest
+    inputs:
+      wait_for_this: ${{parent.jobs.validate_step.outputs.step_1_done}}
