@@ -1,0 +1,14 @@
+$schema: https://azuremlschemas.azureedge.net/latest/managedOnlineDeployment.schema.json
+name: green-deployment
+endpoint_name: diabetes-live-api
+# This tells Azure to grab the model you just trained!
+model: azureml:diabetes_model@latest 
+environment: azureml://registries/azureml/environments/sklearn-1.5/labels/latest
+
+code_configuration:
+  # UPDATED: Look in the root folder for score.py
+  code: .
+  scoring_script: score.py
+
+instance_type: Standard_DS3_v2
+instance_count: 1

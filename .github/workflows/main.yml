@@ -1,36 +1,46 @@
-name: Train Diabetes Model on Push
+name: End-to-End MLOps Pipeline
 
-# Trigger the workflow when code is pushed to the 'main' branch
 on:
   push:
     branches:
       - main
+    # UPDATED: Watch the root folder for changes
     paths:
-      - 'train.py'
-      - 'pipeline.yml'
+      - '*.py'
+      - '*.yml'
+      - 'requirements.txt'
+
+env:
+  RESOURCE_GROUP: "zaheer-h-rg"
+  WORKSPACE: "your-ml-workspace-name"
 
 jobs:
   train-model:
+    name: Train and Register Model
     runs-on: ubuntu-latest
     steps:
-      # 1. Check out the repository code
-      - name: Check out repository code
-        uses: actions/checkout@v3
-
-      # 2. Log into Azure using the secret you created
-      - name: Azure Login
-        uses: azure/login@v1
+      - uses: actions/checkout@v3
+      - uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # 3. Install the Azure ML CLI extension
-      - name: Install Azure ML CLI
-        run: az extension add -n ml -y
-
-      # 4. Submit the pipeline to Azure ML
-      - name: Submit ML Pipeline
-        # Replace the resource group and workspace names below!
+      - run: az extension add -n ml -y
+      - name: Run Training Pipeline
         run: |
-          az ml job create --file pipeline.yml \
-                           --resource-group YOUR_RESOURCE_GROUP_NAME \
-                           --workspace-name YOUR_WORKSPACE_NAME
+          az ml job create --file pipeline.yml --resource-group ${{ env.RESOURCE_GROUP }} --workspace-name ${{ env.WORKSPACE }} --stream
+
+  deploy-model:
+    name: Deploy to Live API Endpoint
+    needs: train-model 
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - run: az extension add -n ml -y
+      - name: Create Endpoint
+        run: |
+          az ml online-endpoint create --file endpoint.yml --resource-group ${{ env.RESOURCE_GROUP }} --workspace-name ${{ env.WORKSPACE }}
+      - name: Create Deployment
+        run: |
+          az ml online-deployment create --file deployment.yml --resource-group ${{ env.RESOURCE_GROUP }} --workspace-name ${{ env.WORKSPACE }} --all-traffic
